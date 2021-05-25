@@ -31,7 +31,7 @@ app.use(function (req, res, next) {
 app.use(cors());
 app.use(express.json());
 
-const db = mysql.createConnection({
+const db = mysql.createPool({
   user: "b99e0f1f43c905",
   host: "us-cdbr-east-03.cleardb.com",
   password: "3899e4c2",
@@ -61,7 +61,7 @@ app.delete("/delete/:id", (req, res) => {
   const tableName = req.body.tableName;
   console.log(id, tableName);
   db.query(
-    `DELETE FROM delivery_list WHERE ${tableName}_id = ${id}`,
+    `DELETE FROM ${tableName} WHERE ${tableName}_id = ${id}`,
     [tableName, id],
     (err, result) => {
       if (err) {
@@ -75,42 +75,58 @@ app.delete("/delete/:id", (req, res) => {
   );
 });
 
-//////////////////////////////// ADD ROW TO INFORMATION
+//////////////////////////////// UPDATE ROW TO INFORMATION
 
-app.put("/update/:id", (req, res) => {
-  const id = req.params.id;
-
+app.put("/update", (req, res) => {
+  const data = req.body.data;
   const tableName = req.body.tableName;
-  console.log(tableName);
-  // db.query(`SELECT * FROM ${tableName}`, (err, result) => {
-  //   if (err) {
-  //     console.log(err);
-  //   } else {
-  //     res.send(result);
-  //   }
-  // });
+
+  let updateStringComponents = data.map((elem) => {
+    return `${elem[0]} = '${elem[1]}'`;
+  });
+  let updateString = updateStringComponents.join(", ");
+
+  console.log(data[0][1]);
+  db.query(
+    `UPDATE ${tableName} SET ${updateString} WHERE ${data[0][0]} = ${data[0][1]}`,
+    (err, result) => {
+      if (err) {
+        console.log(err);
+      } else {
+        res.send(result);
+      }
+    }
+  );
 });
 
-//
-// mysql: app.post('/add/category', (req, res) => {
-//   const name = req.body.name;
-//   const age = req.body.age;
-//   const country = req.body.country;
-//   const position = req.body.position;
-//   const wage = req.body.wage;
-//
-//   db.query(
-//     'INSERT INTO employees (name, age, country, position, wage ) VALUES (?, ?, ?, ?, ?)',
-//     [name, age, country, position, wage],
-//     (err, result) => {
-//       if (err) {
-//         console.log(err);
-//       } else {
-//         res.send('Values Inserted');
-//       }
-//     }
-//   );
-// });
+//////////////////////////////// UPDATE ROW TO INFORMATION
+
+app.post("/addInfo", (req, res) => {
+  const data = req.body.data;
+  const tableName = req.body.tableName;
+
+  let updateStringComponentsParams = data.map((elem) => {
+    return elem[0];
+  });
+  let updateStringComponentsValues = data.map((elem) => {
+    return elem[1];
+  });
+  let updateStringParams = updateStringComponentsParams.join(", ");
+
+  const questionArray = Array(1).fill("?");
+  console.log(questionArray);
+  const updateStringQuestions = questionArray.join(",");
+  console.log(updateStringQuestions);
+  let queryString = `INSERT INTO ${tableName} (${updateStringParams}) VALUES (${updateStringQuestions})`;
+  console.log(queryString);
+  db.query(queryString, [updateStringComponentsValues], (err, result) => {
+    if (err) {
+      console.log(err);
+    } else {
+      res.send(result);
+    }
+  });
+});
 
 app.listen(process.env.PORT || PORT, () => {
   console.log(`Server running on port ${PORT}`);
